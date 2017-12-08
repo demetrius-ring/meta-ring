@@ -20,6 +20,3 @@ S = "${WORKDIR}/git"
 # We need to pass it as param since kernel might support more then one
 # machine, with different entry points
 KERNEL_EXTRA_ARGS += "LOADADDR=${UBOOT_ENTRYPOINT}"
-
-KBUILD_DEFCONFIG_redsky-dev ?= "dev_defconfig"
-KBUILD_DEFCONFIG_redsky-prod ?= "defconfig"

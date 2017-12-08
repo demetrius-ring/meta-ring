@@ -10,5 +10,7 @@ SRCREV = "c27010d99a3d91703ea2d1a3f9630a9dedc3f86f"
 
 DEFAULT_PREFERENCE = "1"
 
+KBUILD_DEFCONFIG_redsky ?= "defconfig"
+
 # TODO: CMDLINE for RedSky
-#CMDLINE ?= ""
+#KERNEL_BOOTCMD = ""
