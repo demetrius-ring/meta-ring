@@ -1,0 +1,101 @@
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 1a1cd2e..7c3cdbb 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -786,6 +786,13 @@ config PANEL_BOOT_MESSAGE
+ 	  An empty message will only clear the display at driver init time. Any other
+ 	  printf()-formatted message is valid with newline and escape codes.
+ 
++config RING_SPI_GPIO
++	tristate "Ring SPI GPIO"
++	depends on SPI_GPIO
++	help
++	  This driver changes all of the SPI GPIO lines to inputs by explicitly
++	  setting the GPIO registers
++
+ source "drivers/misc/c2port/Kconfig"
+ source "drivers/misc/eeprom/Kconfig"
+ source "drivers/misc/cb710/Kconfig"
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 9c7cce2..82eaac5 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -55,6 +55,7 @@ obj-$(CONFIG_ECHO)		+= echo/
+ obj-$(CONFIG_VEXPRESS_SYSCFG)	+= vexpress-syscfg.o
+ obj-$(CONFIG_CXL_BASE)		+= cxl/
+ obj-$(CONFIG_PANEL)             += panel.o
++obj-$(CONFIG_RING_SPI_GPIO)	+= ring_spi_gpio.o
+ 
+ lkdtm-$(CONFIG_LKDTM)		+= lkdtm_core.o
+ lkdtm-$(CONFIG_LKDTM)		+= lkdtm_bugs.o
+diff --git a/drivers/misc/ring_spi_gpio.c b/drivers/misc/ring_spi_gpio.c
+new file mode 100644
+index 0000000..41dd621
+--- /dev/null
++++ b/drivers/misc/ring_spi_gpio.c
+@@ -0,0 +1,53 @@
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/gpio.h>
++
++#define IMX_GPIO_NR(b,p)  (((b - 1) * 32) + p)
++
++#define SPI_MISO IMX_GPIO_NR(4, 8)
++#define SPI_MOSI IMX_GPIO_NR(4, 9)
++#define SPI_SCK  IMX_GPIO_NR(4, 10)
++#define SPI_CS   IMX_GPIO_NR(4, 11)
++
++#define RESET    IMX_GPIO_NR(1, 9)
++
++static int __init ring_spi_init(void)
++{
++    printk("Ring SPI gpio init, tri-stating spidev\n");
++
++    /* Request and allocate GPIOs */
++    gpio_request(SPI_MISO, "spi-miso");
++    gpio_request(SPI_MOSI, "spi-mosi");
++    gpio_request(SPI_SCK , "spi-sck" );
++    gpio_request(SPI_CS  , "spi-cs"  );
++    gpio_request(RESET   , "zwave-reset");
++
++    /* Configure SPI GPIOs as inputs */
++    gpio_direction_input(SPI_MISO);
++    gpio_direction_input(SPI_MOSI);
++    gpio_direction_input(SPI_SCK );
++    gpio_direction_input(SPI_CS  );
++
++    /* Configure reset as output and toggle it */
++    gpio_direction_output(RESET, 0);
++    gpio_set_value(RESET, 1);
++
++    /* Release GPIOs */
++    gpio_free(SPI_MISO);
++    gpio_free(SPI_MOSI);
++    gpio_free(SPI_SCK );
++    gpio_free(SPI_CS  );
++    gpio_free(RESET   );
++    return 0;
++}
++
++static void __exit ring_spi_exit(void)
++{
++    return;
++}
++
++late_initcall(ring_spi_init);
++module_exit(ring_spi_exit);
++
++MODULE_LICENSE("GPL");
++
+diff --git a/drivers/spi/spidev.c b/drivers/spi/spidev.c
+index 2e05046..d780491 100644
+--- a/drivers/spi/spidev.c
++++ b/drivers/spi/spidev.c
+@@ -696,6 +696,7 @@ static struct class *spidev_class;
+ static const struct of_device_id spidev_dt_ids[] = {
+ 	{ .compatible = "rohm,dh2228fv" },
+ 	{ .compatible = "lineartechnology,ltc2488" },
++	{ .compatible = "spidev" },
+ 	{},
+ };
+ MODULE_DEVICE_TABLE(of, spidev_dt_ids);

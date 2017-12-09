@@ -1,0 +1,52 @@
+diff --git a/drivers/usb/serial/option.c b/drivers/usb/serial/option.c
+index 42cc72e..b7ccb05 100644
+--- a/drivers/usb/serial/option.c
++++ b/drivers/usb/serial/option.c
+@@ -51,6 +51,10 @@ static void option_release(struct usb_serial *serial);
+ static void option_instat_callback(struct urb *urb);
+ 
+ /* Vendor and product IDs */
++#define QUECTEL_VENDOR_ID			0X2C7C
++#define QUECTEL_PRODUCT_EC21			0X0121
++#define QUECTEL_PRODUCT_EC25			0X0125
++#define QUECTEL_PRODUCT_BG96			0x0296
+ #define OPTION_VENDOR_ID			0x0AF0
+ #define OPTION_PRODUCT_COLT			0x5000
+ #define OPTION_PRODUCT_RICOLA			0x6000
+@@ -662,6 +666,9 @@ static const struct option_blacklist_info cinterion_rmnet2_blacklist = {
+ };
+ 
+ static const struct usb_device_id option_ids[] = {
++	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EC21) },
++	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EC25) },
++	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_BG96) },
+ 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_COLT) },
+ 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_RICOLA) },
+ 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_RICOLA_LIGHT) },
+@@ -2042,6 +2049,8 @@ static struct usb_serial_driver option_1port_device = {
+ #ifdef CONFIG_PM
+ 	.suspend           = usb_wwan_suspend,
+ 	.resume            = usb_wwan_resume,
++	/* Quectel ECXX Reset Resume */
++	.reset_resume      = usb_wwan_resume,
+ #endif
+ };
+ 
+diff --git a/drivers/usb/serial/usb_wwan.c b/drivers/usb/serial/usb_wwan.c
+index 3dfdfc8..eb10c56 100644
+--- a/drivers/usb/serial/usb_wwan.c
++++ b/drivers/usb/serial/usb_wwan.c
+@@ -505,6 +505,13 @@ static struct urb *usb_wwan_setup_urb(struct usb_serial_port *port,
+ 			  usb_sndbulkpipe(serial->dev, endpoint) | dir,
+ 			  buf, len, callback, ctx);
+ 
++	/* Quectel Zero Packet Mechanism */
++	if (dir == USB_DIR_OUT) {
++		struct usb_device_descriptor *desc = &serial->dev->descriptor;
++		if (desc->idVendor == cpu_to_le16(0x2C7C))
++			urb->transfer_flags |= URB_ZERO_PACKET;
++	}
++
+ 	return urb;
+ }
+ 
