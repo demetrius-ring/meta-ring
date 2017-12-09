@@ -1,4 +1,4 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-${PV}:"
+FILESEXTRAPATHS_prepend := "${THISDIR}/linux-redsky:"
 
 require recipes-kernel/linux/linux-redsky.inc
 
